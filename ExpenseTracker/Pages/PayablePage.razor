@@ -1,0 +1,46 @@
+@page "/payables"
+
+<div class="row">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Payables</span>
+        </div>
+        <div class="card-body">
+            <table class="table table-responsive-sm table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th>Payable</th>
+                        <th>Recuring</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (IsAddNewPayable)
+                    {
+                        <tr>
+                            <td><input class="form-control-sm" @bind-value="CurrentPayable.Payablename" /></td>
+                            <td>
+                                <input
+                                    @onchange="OnChangeIsRecuring"
+                                    type="checkbox" />
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-success" @onclick="SavePayable">Save</button>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Payables)
+                    {
+                        <tr>
+                            <td>@item.Payablename</td>
+                            <td>@(item.IsRecuring.Value ? "YES" : "NO")</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" @onclick="@(()=>EditPayable(item))">Edit</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,101 @@
+@page "/incomedates"
+
+
+<div class="row">
+    <div class="col-sm-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="form">
+                    <div class="form-group">
+                        <label for="">Income Date</label>
+                        <input type="date" class="form-control" @bind-value="CurrentIncomeDateAndAmount.IncomeDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="">Amount</label>
+                        <input type="number" class="form-control" @bind-value="CurrentIncomeDateAndAmount.IncomeAmount">
+                    </div>
+                    <button @onclick="Save" class="btn btn-block btn-success"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-9">
+        <table class="table table-responsive-sm table-hover table-bordered">
+            <thead>
+                <tr>
+                    <th>Income Date</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in IncomeDateAndAmounts)
+                {
+                    <tr style="cursor:pointer;" @onclick="@(()=>ViewExpenseDetail(item))">
+                        <td>@item.IncomeDate</td>
+                        <td>@item.IncomeAmount</td>
+                    </tr>
+                    @if (IsAddNewExpenseDetail && CurrentIncomeDateAndAmountToAddExpenseDetail == item)
+                    {
+                        <tr>
+                            <td colspan="2">
+                                <div class="row">
+                                    <div class="col-sm-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="form-group">
+                                                    <label for="">Payable</label>
+                                                    <select class="form-control" @bind="CurrentExpenseDetail.PayableId">
+                                                        <option value="0">[SELECT]</option>
+                                                        @foreach (var payable in PayablesList)
+                                                        {
+                                                            <option value="@payable.Payableid">@payable.Payablename</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="">Amount</label>
+                                                    <input type="text" class="form-control" @bind-value="@CurrentExpenseDetail.Amount">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="">Comment</label>
+                                                    <input type="text" class="form-control" @bind-value="@CurrentExpenseDetail.Comment">
+                                                </div>
+                                            </div>
+                                            <div class="card-footer">
+                                                <button class="btn btn-success btn-sm" @onclick="SaveExpenseDetail">Save</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-9">
+                                        <table class="table table-responsive-sm table-hover table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Payable</th>
+                                                    <th>Amount</th>
+                                                    <th>Comment</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var expense in ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id).ToList())
+                                                {
+                                                    <tr>
+                                                        @{
+                                                            var payable = PayablesList.FirstOrDefault(s=>s.Payableid  == expense.PayableId);
+                                                        }
+                                                        <td>@payable?.Payablename</td>
+                                                        <td>@expense.Amount</td>
+                                                        <td>@expense.Comment</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
