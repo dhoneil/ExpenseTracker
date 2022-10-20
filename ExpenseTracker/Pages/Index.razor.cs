@@ -12,7 +12,7 @@ namespace ExpenseTracker.Pages
         [Inject] NavigationManager NavigationManager {get;set;} = null!;
         protected override async Task OnInitializedAsync()
         {
-            NavigationManager.NavigateTo("payables");
+            NavigationManager.NavigateTo("incomedates");
             await Task.CompletedTask;
         }
     }

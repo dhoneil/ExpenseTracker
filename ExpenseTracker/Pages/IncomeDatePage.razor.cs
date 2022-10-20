@@ -6,12 +6,14 @@ using ExpenseTracker.Models;
 using ExpenseTracker.Services;
 using Microsoft.AspNetCore.Components;
 using Newtonsoft.Json;
+using Microsoft.JSInterop;
 
 namespace ExpenseTracker.Pages
 {
     public partial class IncomeDatePage : ComponentBase
     {
         [Inject] IHelperService HelperService {get;set;} = null!;
+        [Inject] IJSRuntime JS {get;set;} = null!;
         public List<IncomeDateAndAmount>? IncomeDateAndAmounts { get; set; } = new();
         public List<ExpenseDetail>? ExpenseDetailsList { get; set; } = new();
         public List<Payable>? PayablesList { get; set; } = new();
@@ -53,18 +55,45 @@ namespace ExpenseTracker.Pages
 
         public async Task SaveExpenseDetail()
         {
-            var res = HelperService.DbQuery($@"INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
+            if (CurrentExpenseDetail.Id > 0)
+            {
+                HelperService.DbQuery($@"UPDATE ExpenseDetails SET PayableId = {CurrentExpenseDetail.PayableId},
+                                        Amount = {CurrentExpenseDetail.Amount},
+                                        Comment = '{CurrentExpenseDetail.Comment}'
+                                        where Id = {CurrentExpenseDetail.Id}");
+            }else
+            {
+                HelperService.DbQuery($@"INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
                                                     {CurrentExpenseDetail.PayableId},
                                                     {CurrentExpenseDetail.Amount},
                                                     '{CurrentExpenseDetail.Comment}')");
-            await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
+            }
 
+            await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
             var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
             ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
 
             CurrentExpenseDetail = new();
 
             StateHasChanged();
+        }
+
+        public async Task DeleteExpenseDetail(ExpenseDetail detail)
+        {
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Delete this expense?");
+            if (confirmed)
+            {
+                HelperService.DbQuery($"DELETE FROM ExpenseDetails where Id = {detail.Id}");
+
+                await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
+                var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
+                ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
+            }
+        }
+
+        public async Task AddAllRecuring()
+        {
+
         }
     }
 }

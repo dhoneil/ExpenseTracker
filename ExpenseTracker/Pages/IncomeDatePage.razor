@@ -63,6 +63,10 @@
                                             </div>
                                             <div class="card-footer">
                                                 <button class="btn btn-success btn-sm" @onclick="SaveExpenseDetail">Save</button>
+                                                @if (CurrentExpenseDetail.Id > 0)
+                                                {
+                                                    <button class="btn btn-danger btn-sm" @onclick="@(()=>CurrentExpenseDetail = new())">Cancel</button>
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -73,18 +77,47 @@
                                                     <th>Payable</th>
                                                     <th>Amount</th>
                                                     <th>Comment</th>
+                                                    <th></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var expense in ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id).ToList())
-                                                {
-                                                    <tr>
-                                                        @{
-                                                            var payable = PayablesList.FirstOrDefault(s=>s.Payableid  == expense.PayableId);
+                                                @{
+                                                    decimal amount = 0;
+                                                    @if (ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id).Count() <= 0)
+                                                    {
+                                                        <tr>
+                                                            <td colspan="4" style="align : center;">
+                                                                <button class="btn btn-block btn-success" @onclick="AddAllRecuring">Add all recurring...</button>
+                                                            </td>
+                                                        </tr>
+                                                    }else
+                                                    {
+                                                        foreach (var expense in ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id).ToList())
+                                                        {
+                                                            amount += (decimal)expense.Amount;
+                                                            <tr>
+                                                                @{
+                                                                    var payable = PayablesList.FirstOrDefault(s=>s.Payableid  == expense.PayableId);
+                                                                }
+                                                                <td>@payable?.Payablename</td>
+                                                                <td>@expense.Amount</td>
+                                                                <td>@expense.Comment</td>
+                                                                <td>
+                                                                    <button class="btn btn-sm btn-info" @onclick="@(()=>CurrentExpenseDetail = expense)">Edit</button>
+                                                                    <button class="btn btn-sm btn-danger" @onclick="@(()=>DeleteExpenseDetail(expense))">Delete</button>
+                                                                </td>
+                                                            </tr>
                                                         }
-                                                        <td>@payable?.Payablename</td>
-                                                        <td>@expense.Amount</td>
-                                                        <td>@expense.Comment</td>
+                                                    }
+                                                    <tr>
+                                                        <td></td>
+                                                        <td style="color:red; font-weight:bold;">@amount</td>
+                                                        <td style="color:orange; font-weight:bold;">
+                                                            @{
+                                                                var remaining = item.IncomeAmount - amount;
+                                                                <span>@remaining</span>
+                                                            }
+                                                        </td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -99,3 +132,9 @@
         </table>
     </div>
 </div>
+
+<style>
+    .table {
+      border: 1px solid;
+    }
+</style>
