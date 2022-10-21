@@ -19,6 +19,7 @@ namespace ExpenseTracker.Pages
 
         protected override async Task OnInitializedAsync()
         {
+            CurrentPayable.IsRecuring = false;
             await LoadData();
         }
 
@@ -28,12 +29,6 @@ namespace ExpenseTracker.Pages
             Payables = JsonConvert.DeserializeObject<List<Payable>>(payablesquery);
         }
 
-        public async Task OnChangeIsRecuring(ChangeEventArgs args)
-        {
-            var value = (bool)args.Value;
-            CurrentPayable.IsRecuring = value;
-        }
-
         public async Task SavePayable()
         {
             var isrecuring = (CurrentPayable.IsRecuring.Value == true ? 1 : 0);
@@ -41,13 +36,17 @@ namespace ExpenseTracker.Pages
             if (CurrentPayable.Payableid > 0 )
             {
                 HelperService.DbQuery($@"UPDATE Payable SET Payablename = '{CurrentPayable.Payablename}',
-                                        IsRecuring = {isrecuring} where Payableid  = {CurrentPayable.Payableid}");
+                                        IsRecuring = {isrecuring},
+                                        Amount = {(CurrentPayable.Amount.HasValue ? CurrentPayable.Amount : 0)}
+                                        where Payableid  = {CurrentPayable.Payableid}");
                 await LoadData();
             }
             else
             {
                 HelperService.DbQuery($@"INSERT INTO Payable
-                                    values('{CurrentPayable.Payablename}',{isrecuring})");
+                                    values('{CurrentPayable.Payablename}',
+                                    {(CurrentPayable.IsRecuring.HasValue ? isrecuring : 0)},
+                                    {(CurrentPayable.Amount.HasValue ? CurrentPayable.Amount : 0)})");
                 Payables?.Add(CurrentPayable);
             }
 

@@ -42,7 +42,9 @@ namespace ExpenseTracker.Pages
 
         public async Task Save()
         {
-            var res = HelperService.DbQuery($@"INSERT INTO IncomeDateAndAmount VALUES('{CurrentIncomeDateAndAmount.IncomeDate}',
+            HelperService.DbQuery($@"IF NOT EXISTS(SELECT 1 FROM IncomeDateAndAmount WHERE IncomeDate = '{CurrentIncomeDateAndAmount.IncomeDate}'
+                                    and IncomeAmount = {CurrentIncomeDateAndAmount.IncomeAmount})
+                                        INSERT INTO IncomeDateAndAmount VALUES('{CurrentIncomeDateAndAmount.IncomeDate}',
                                                     {CurrentIncomeDateAndAmount.IncomeAmount})");
             await LoadData();
         }
@@ -50,7 +52,7 @@ namespace ExpenseTracker.Pages
         public async Task ViewExpenseDetail(IncomeDateAndAmount model)
         {
             CurrentIncomeDateAndAmountToAddExpenseDetail = model;
-            IsAddNewExpenseDetail = true;
+            await Task.CompletedTask;
         }
 
         public async Task SaveExpenseDetail()
@@ -69,6 +71,7 @@ namespace ExpenseTracker.Pages
                                                     '{CurrentExpenseDetail.Comment}')");
             }
 
+            IsAddNewExpenseDetail = true;
             await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
             var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
             ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
@@ -85,14 +88,35 @@ namespace ExpenseTracker.Pages
             {
                 HelperService.DbQuery($"DELETE FROM ExpenseDetails where Id = {detail.Id}");
 
+                IsAddNewExpenseDetail = true;
                 await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
                 var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
                 ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
             }
         }
 
-        public async Task AddAllRecuring()
+        public async Task AddAllRecuring(IncomeDateAndAmount incomedate)
         {
+            CurrentIncomeDateAndAmountToAddExpenseDetail = incomedate;
+            var getRcurringPayables = HelperService.DbQuery($@"SELECT * from Payable where IsRecuring = 1");
+            var recurringPayables = JsonConvert.DeserializeObject<List<Payable>>(getRcurringPayables);
+
+            //delete all first
+            //HelperService.DbQuery($@"DELETE FROM ExpenseDetails where IncomeDateAndAmountId = {CurrentIncomeDateAndAmountToAddExpenseDetail.Id}");
+            foreach (var item in recurringPayables)
+            {
+                HelperService.DbQuery($@"IF NOT EXISTS(SELECT 1 FROM ExpenseDetails WHERE payableid = {item.Payableid} and IncomeDateAndAmountId = {CurrentIncomeDateAndAmountToAddExpenseDetail.Id})
+                                        INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
+                                                    {item.Payableid},
+                                                    {(item.Amount.HasValue ? item.Amount : 0)},
+                                                    'added from recurring')");
+            }
+
+            IsAddNewExpenseDetail = true;
+            await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
+            var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
+            ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
+
 
         }
     }

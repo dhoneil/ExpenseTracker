@@ -1,46 +1,67 @@
 @page "/payables"
 
 <div class="row">
-    <div class="card">
-        <div class="card-header">
-            <span class="card-title">Payables</span>
+    <div class="col-sm-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="">Payable</label>
+                    <input class="form-control" @bind-value="CurrentPayable.Payablename" />
+                </div>
+                <div class="form-group">
+                    <label for="">Amount</label>
+                    <input class="form-control" @bind-value="CurrentPayable.Amount" />
+                </div>
+                <div class="form-group">
+                    <label for="">Recurring?</label>
+                    <input
+                        @bind-value="CurrentPayable.IsRecuring"
+                        type="checkbox" checked="@(CurrentPayable.IsRecuring.HasValue ? (CurrentPayable.IsRecuring.Value == true ? true : false) : false)" />
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-sm btn-success btn-block" @onclick="SavePayable">Save</button>
+            </div>
         </div>
-        <div class="card-body">
-            <table class="table table-responsive-sm table-hover table-bordered">
-                <thead>
-                    <tr>
-                        <th>Payable</th>
-                        <th>Recuring</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (IsAddNewPayable)
-                    {
+    </div>
+    <div class="col-sm-9">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Payables</span>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-responsive-sm table-hover table-bordered table-striped">
+                    <thead>
                         <tr>
-                            <td><input class="form-control-sm" @bind-value="CurrentPayable.Payablename" /></td>
-                            <td>
-                                <input
-                                    @onchange="OnChangeIsRecuring"
-                                    type="checkbox" />
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-success" @onclick="SavePayable">Save</button>
-                            </td>
+                            <th>Payable</th>
+                            <th>Recuring</th>
+                            <th>Amount</th>
+                            <th></th>
                         </tr>
-                    }
-                    @foreach (var item in Payables)
-                    {
-                        <tr>
-                            <td>@item.Payablename</td>
-                            <td>@(item.IsRecuring.Value ? "YES" : "NO")</td>
-                            <td>
-                                <button class="btn btn-sm btn-info" @onclick="@(()=>EditPayable(item))">Edit</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @{
+                            decimal amount = 0;
+                            foreach (var item in Payables)
+                            {
+                                amount+=(decimal)item.Amount;
+                                <tr>
+                                    <td>@item.Payablename</td>
+                                    <td>@(item.IsRecuring.Value ? "YES" : "NO")</td>
+                                    <td>@(item.Amount.HasValue ? item.Amount : 0.00)</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" @onclick="@(()=>EditPayable(item))">Edit</button>
+                                    </td>
+                                </tr>
+                            }
+                            <tr>
+                                <td colspan="2"></td>
+                                <td style="color:red; font-weight:bold;">@amount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
