@@ -27,19 +27,27 @@
                         <tr>
                             <th>Income Date</th>
                             <th>Amount</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in IncomeDateAndAmounts.OrderBy(s=>s.IncomeDate))
                         {
-                            <tr style="cursor:pointer;" @onclick="@(()=>{IsAddNewExpenseDetail = true; ViewExpenseDetail(item);})">
+                            <tr style="cursor:pointer;">
                                 <td>@item.IncomeDate</td>
                                 <td>@item.IncomeAmount</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-primary" @onclick="@(()=>{IsAddNewExpenseDetail = true; ViewExpenseDetail(item);})">View</button>
+                                        <button type="button" class="btn btn-sm btn-info" @onclick="@(()=>{CurrentIncomeDateAndAmount = item;})">Edit</button>
+                                        <button type="button" class="btn btn-sm btn-danger">Delete</button>
+                                    </div>
+                                </td>
                             </tr>
                             @if (IsAddNewExpenseDetail && CurrentIncomeDateAndAmountToAddExpenseDetail == item)
                             {
                                 <tr>
-                                    <td colspan="2">
+                                    <td colspan="3">
                                         <div class="row">
                                             <div class="col-sm-3">
                                                 <div class="card">
@@ -96,8 +104,10 @@
                                                                     <td>@expense.Amount</td>
                                                                     <td>@expense.Comment</td>
                                                                     <td>
-                                                                        <button class="btn btn-sm btn-info" @onclick="@(()=>CurrentExpenseDetail = expense)">Edit</button>
-                                                                        <button class="btn btn-sm btn-danger" @onclick="@(()=>DeleteExpenseDetail(expense))">Delete</button>
+                                                                        <div class="btn-group">
+                                                                            <button class="btn btn-sm btn-info" @onclick="@(()=>CurrentExpenseDetail = expense)">Edit</button>
+                                                                            <button class="btn btn-sm btn-danger" @onclick="@(()=>DeleteExpenseDetail(expense))">Delete</button>
+                                                                        </div>
                                                                     </td>
                                                                 </tr>
                                                             }

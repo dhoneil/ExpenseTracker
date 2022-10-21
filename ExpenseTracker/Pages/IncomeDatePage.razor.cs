@@ -42,10 +42,19 @@ namespace ExpenseTracker.Pages
 
         public async Task Save()
         {
-            HelperService.DbQuery($@"IF NOT EXISTS(SELECT 1 FROM IncomeDateAndAmount WHERE IncomeDate = '{CurrentIncomeDateAndAmount.IncomeDate}'
+            if (CurrentIncomeDateAndAmount.Id > 0)
+            {
+                HelperService.DbQuery($@"UPDATE IncomeDateAndAmount set IncomeDate = '{CurrentIncomeDateAndAmount.IncomeDate}',
+                                        IncomeAmount = {CurrentIncomeDateAndAmount.IncomeAmount}
+                                        where Id = {CurrentIncomeDateAndAmount.Id}");
+            }else
+            {
+                HelperService.DbQuery($@"IF NOT EXISTS(SELECT 1 FROM IncomeDateAndAmount WHERE IncomeDate = '{CurrentIncomeDateAndAmount.IncomeDate}'
                                     and IncomeAmount = {CurrentIncomeDateAndAmount.IncomeAmount})
                                         INSERT INTO IncomeDateAndAmount VALUES('{CurrentIncomeDateAndAmount.IncomeDate}',
                                                     {CurrentIncomeDateAndAmount.IncomeAmount})");
+            }
+
             await LoadData();
         }
 
