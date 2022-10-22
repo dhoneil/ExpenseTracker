@@ -14,4 +14,5 @@ public partial class ExpenseDetail
     public decimal? Amount { get; set; }
 
     public string? Comment { get; set; }
+    public bool? IsPaid { get; set; }
 }

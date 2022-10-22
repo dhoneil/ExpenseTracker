@@ -1,5 +1,8 @@
 @page "/incomedates"
 
+<PageTitle>Income Dates</PageTitle>
+
+<ExpenseTracker.Shared.PageHeader PageName="Income Dates"></ExpenseTracker.Shared.PageHeader>
 
 <div class="row">
     <div class="col-sm-3">
@@ -21,6 +24,9 @@
     </div>
     <div class="col-sm-9">
         <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="fa fa-list"></i> List</span>
+            </div>
             <div class="card-body">
                 <table class="table table-sm table-responsive-sm table-hover table-bordered table-striped">
                     <thead>
@@ -34,13 +40,14 @@
                         @foreach (var item in IncomeDateAndAmounts.OrderBy(s=>s.IncomeDate))
                         {
                             <tr style="cursor:pointer;">
-                                <td>@item.IncomeDate</td>
+                                <td>@item.IncomeDate.Value.ToString($"MMMM dd, yyyy (dddd)") </td>
                                 <td>@item.IncomeAmount</td>
                                 <td>
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-sm btn-primary" @onclick="@(()=>{IsAddNewExpenseDetail = true; ViewExpenseDetail(item);})">View</button>
                                         <button type="button" class="btn btn-sm btn-info" @onclick="@(()=>{CurrentIncomeDateAndAmount = item;})">Edit</button>
-                                        <button type="button" class="btn btn-sm btn-danger">Delete</button>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="@(()=>DeleteIncomeDate(item))">Delete</button>
+
                                     </div>
                                 </td>
                             </tr>
@@ -96,7 +103,10 @@
                                                             foreach (var expense in ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id).ToList())
                                                             {
                                                                 amount += (decimal)expense.Amount;
-                                                                <tr>
+                                                                var paid = "bg-green text-white";
+                                                                var notpaid = "bg-white text-black";
+                                                                var ispaid = (expense.IsPaid.HasValue ? (expense.IsPaid.Value == true ? paid : notpaid) : notpaid);
+                                                                <tr class="@ispaid" style="cursor: pointer;" @ondblclick="@(()=>SetExpenseStatus(expense))">
                                                                     @{
                                                                         var payable = PayablesList.FirstOrDefault(s=>s.Payableid  == expense.PayableId);
                                                                     }
@@ -125,6 +135,7 @@
                                                                         <span>@remaining</span>
                                                                     }
                                                                 </td>
+                                                                <td></td>
                                                             </tr>
                                                         }
                                                     </tbody>

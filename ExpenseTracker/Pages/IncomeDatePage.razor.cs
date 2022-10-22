@@ -58,10 +58,29 @@ namespace ExpenseTracker.Pages
             await LoadData();
         }
 
+        public async Task DeleteIncomeDate(IncomeDateAndAmount model)
+        {
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Delete this income date?");
+            if (confirmed)
+            {
+                HelperService.DbQuery($"DELETE FROM IncomeDateAndAmount where Id = {model.Id}");
+                HelperService.DbQuery($"DELETE FROM ExpenseDetails where IncomeDateAndAmountId = {model.Id}");
+                await LoadData();
+            }
+        }
+
         public async Task ViewExpenseDetail(IncomeDateAndAmount model)
         {
             CurrentIncomeDateAndAmountToAddExpenseDetail = model;
             await Task.CompletedTask;
+        }
+
+        async Task RefreshExpenseDetails()
+        {
+            IsAddNewExpenseDetail = true;
+            await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
+            var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
+            ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
         }
 
         public async Task SaveExpenseDetail()
@@ -80,10 +99,7 @@ namespace ExpenseTracker.Pages
                                                     '{CurrentExpenseDetail.Comment}')");
             }
 
-            IsAddNewExpenseDetail = true;
-            await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
-            var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
-            ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
+            await RefreshExpenseDetails();
 
             CurrentExpenseDetail = new();
 
@@ -97,10 +113,7 @@ namespace ExpenseTracker.Pages
             {
                 HelperService.DbQuery($"DELETE FROM ExpenseDetails where Id = {detail.Id}");
 
-                IsAddNewExpenseDetail = true;
-                await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
-                var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
-                ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
+                await RefreshExpenseDetails();
             }
         }
 
@@ -121,12 +134,18 @@ namespace ExpenseTracker.Pages
                                                     'added from recurring')");
             }
 
-            IsAddNewExpenseDetail = true;
-            await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
-            var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
-            ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
+            await RefreshExpenseDetails();
+        }
 
+        public async Task SetExpenseStatus(ExpenseDetail detail)
+        {
+            var status = (detail.IsPaid.HasValue ? (detail.IsPaid.Value == true ? 0 : 1) : 1 );
+            HelperService.DbQuery($@"UPDATE ExpenseDetails SET IsPaid = {status}
+                                        where Id = {detail.Id}");
 
+            await RefreshExpenseDetails();
+
+            StateHasChanged();
         }
     }
 }
