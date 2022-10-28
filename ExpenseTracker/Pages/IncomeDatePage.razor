@@ -17,7 +17,12 @@
                         <label for="">Amount</label>
                         <input type="number" class="form-control" @bind-value="CurrentIncomeDateAndAmount.IncomeAmount">
                     </div>
-                    <button @onclick="Save" class="btn btn-block btn-success"><i class="fas fa-save"></i> Save</button>
+                    <button @onclick="Save" class="btn btn-success"><i class="fas fa-save"></i> Save</button>
+                    &nbsp;
+                    @if (CurrentIncomeDateAndAmount.Id > 0)
+                    {
+                        <button @onclick="@(()=>CurrentIncomeDateAndAmount = new())" class="btn btn-danger"><i class="fas fa-times"></i> Cancel</button>
+                    }
                 </div>
             </div>
         </div>
@@ -56,7 +61,7 @@
                                 <tr>
                                     <td colspan="3">
                                         <div class="row">
-                                            <div class="col-sm-3">
+                                            <div class="col-sm-4">
                                                 <div class="card">
                                                     <div class="card-body">
                                                         <div class="form-group">
@@ -79,16 +84,11 @@
                                                             </label>
                                                             @if (IsAddNewPayable)
                                                             {
-                                                                <div class="input-group">
-                                                                    <input class="form-control" @bind-value="NewPayable"  />
-                                                                    <div @onclick="SaveNewPayable" class="input-group-append" style="cursor:pointer;">
-                                                                        <div class="input-group-text"><i class="fa fa-save"></i></div>
-                                                                    </div>
-                                                                </div>
+                                                                <input class="form-control" @bind-value="NewPayable"  />
                                                             }else{
                                                                 <select class="form-control" @bind="CurrentExpenseDetail.PayableId">
                                                                     <option value="0">[SELECT]</option>
-                                                                    @foreach (var payable in PayablesList)
+                                                                    @foreach (var payable in RecurringPayablesList)
                                                                     {
                                                                         <option value="@payable.Payableid">@payable.Payablename</option>
                                                                     }
@@ -106,6 +106,7 @@
                                                     </div>
                                                     <div class="card-footer">
                                                         <button class="btn btn-success btn-sm" @onclick="SaveExpenseDetail">Save</button>
+                                                        &nbsp;
                                                         @if (CurrentExpenseDetail.Id > 0)
                                                         {
                                                             <button class="btn btn-danger btn-sm" @onclick="@(()=>CurrentExpenseDetail = new())">Cancel</button>
@@ -113,7 +114,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-sm-9">
+                                            <div class="col-sm-8">
                                                 <table class="table table-sm table-responsive-sm table-hover table-bordered table-striped">
                                                     <thead>
                                                         <tr>
@@ -126,17 +127,20 @@
                                                     <tbody>
                                                         @{
                                                             decimal amount = 0;
-                                                            foreach (var expense in ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id).ToList())
+                                                            foreach (var expense in ExpenseDetailsList.Where(s=>s.IncomeDateAndAmountId == item.Id)
+                                                                                                      .ToList()
+                                                                                                      .OrderByDescending(s=>s.Amount)
+                                                                                                      .OrderBy(s=>s.PayableId))
                                                             {
                                                                 amount += (decimal)expense.Amount;
                                                                 var paid = "bg-green text-white";
                                                                 var notpaid = "bg-white text-black";
                                                                 var ispaid = (expense.IsPaid.HasValue ? (expense.IsPaid.Value == true ? paid : notpaid) : notpaid);
-                                                                <tr class="@ispaid" style="cursor: pointer;" @ondblclick="@(()=>SetExpenseStatus(expense))">
-                                                                    @{
-                                                                        var payable = PayablesList.FirstOrDefault(s=>s.Payableid  == expense.PayableId);
-                                                                    }
-                                                                    <td>@payable?.Payablename</td>
+                                                                var isrecurring = (PayablesList.FirstOrDefault(s=>s.Payableid == expense.PayableId)?.IsRecuring == true ? true : false);
+                                                                <tr class="@ispaid" style="cursor: pointer; font-weight:@(isrecurring?"bold" : "")" @ondblclick="@(()=>SetExpenseStatus(expense))">
+                                                                    <td>
+                                                                        @PayablesList.FirstOrDefault(s=>s.Payableid == expense.PayableId)?.Payablename
+                                                                    </td>
                                                                     <td>@expense.Amount</td>
                                                                     <td>@expense.Comment</td>
                                                                     <td>

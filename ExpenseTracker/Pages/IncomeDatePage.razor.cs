@@ -7,6 +7,8 @@ using ExpenseTracker.Services;
 using Microsoft.AspNetCore.Components;
 using Newtonsoft.Json;
 using Microsoft.JSInterop;
+using ExpenseTracker.Repository;
+using ExpenseTracker.ViewModel;
 
 namespace ExpenseTracker.Pages
 {
@@ -16,6 +18,7 @@ namespace ExpenseTracker.Pages
         [Inject] IJSRuntime JS {get;set;} = null!;
         public List<IncomeDateAndAmount>? IncomeDateAndAmounts { get; set; } = new();
         public List<ExpenseDetail>? ExpenseDetailsList { get; set; } = new();
+        public List<Payable>? RecurringPayablesList { get; set; } = new();
         public List<Payable>? PayablesList { get; set; } = new();
         public IncomeDateAndAmount CurrentIncomeDateAndAmount { get; set; } = new();
         public bool IsAddNewExpenseDetail { get; set; }= false;
@@ -23,6 +26,10 @@ namespace ExpenseTracker.Pages
         public IncomeDateAndAmount CurrentIncomeDateAndAmountToAddExpenseDetail { get; set; } = new();
         public bool IsAddNewPayable { get; set; } =  false;
         public string NewPayable { get; set; } = string.Empty;
+        public List<ExpenseDetailVM> ExpenseDetailVMList { get; set; } = new();
+        IncomeDateAndAmountRepository repoIncomeDate = new IncomeDateAndAmountRepository();
+        ExpenseDetailRepository repoExpenseDetail = new ExpenseDetailRepository();
+        PayableRepository repoPayable = new PayableRepository();
         protected override async Task OnInitializedAsync()
         {
             await LoadData();
@@ -30,15 +37,10 @@ namespace ExpenseTracker.Pages
 
         public async Task LoadData()
         {
-            var IncomeDateAndAmountQuery = HelperService.DbQuery($@"select * from IncomeDateAndAmount");
-            IncomeDateAndAmounts = JsonConvert.DeserializeObject<List<IncomeDateAndAmount>>(IncomeDateAndAmountQuery);
-
-            var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
-            ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
-
-            var PayableQuery = HelperService.DbQuery($@"select * from Payable");
-            PayablesList = JsonConvert.DeserializeObject<List<Payable>>(PayableQuery);
-
+            IncomeDateAndAmounts = repoIncomeDate.GetAll().ToList();
+            ExpenseDetailsList = repoExpenseDetail.GetAll().ToList();
+            PayablesList = repoPayable.GetAll().ToList();
+            RecurringPayablesList = repoPayable.GetAll().Where(s=>s.IsRecuring.Value == true && s.IsComplete.Value == false).ToList();
             await Task.CompletedTask;
         }
 
@@ -46,17 +48,13 @@ namespace ExpenseTracker.Pages
         {
             if (CurrentIncomeDateAndAmount.Id > 0)
             {
-                HelperService.DbQuery($@"UPDATE IncomeDateAndAmount set IncomeDate = '{CurrentIncomeDateAndAmount.IncomeDate}',
-                                        IncomeAmount = {CurrentIncomeDateAndAmount.IncomeAmount}
-                                        where Id = {CurrentIncomeDateAndAmount.Id}");
+                repoIncomeDate.Update(CurrentIncomeDateAndAmount);
             }else
             {
-                HelperService.DbQuery($@"IF NOT EXISTS(SELECT 1 FROM IncomeDateAndAmount WHERE IncomeDate = '{CurrentIncomeDateAndAmount.IncomeDate}'
-                                    and IncomeAmount = {CurrentIncomeDateAndAmount.IncomeAmount})
-                                        INSERT INTO IncomeDateAndAmount VALUES('{CurrentIncomeDateAndAmount.IncomeDate}',
-                                                    {CurrentIncomeDateAndAmount.IncomeAmount})");
+                repoIncomeDate.Create(CurrentIncomeDateAndAmount);
             }
 
+            CurrentExpenseDetail = new();
             await LoadData();
         }
 
@@ -65,15 +63,18 @@ namespace ExpenseTracker.Pages
             bool confirmed = await JS.InvokeAsync<bool>("confirm", "Delete this income date?");
             if (confirmed)
             {
-                HelperService.DbQuery($"DELETE FROM IncomeDateAndAmount where Id = {model.Id}");
-                HelperService.DbQuery($"DELETE FROM ExpenseDetails where IncomeDateAndAmountId = {model.Id}");
+                repoExpenseDetail.Delete(s=>s.IncomeDateAndAmountId == model.Id);
+                repoIncomeDate.Delete(s=>s.Id == model.Id);
                 await LoadData();
             }
+            CurrentExpenseDetail = new();
         }
 
         public async Task ViewExpenseDetail(IncomeDateAndAmount model)
         {
             CurrentIncomeDateAndAmountToAddExpenseDetail = model;
+            List<ExpenseDetailVM> expenseDetailVMs = new List<ExpenseDetailVM>();
+            var expendetails = repoExpenseDetail.GetAll().ToList();
             await Task.CompletedTask;
         }
 
@@ -81,34 +82,55 @@ namespace ExpenseTracker.Pages
         {
             IsAddNewExpenseDetail = true;
             await ViewExpenseDetail(CurrentIncomeDateAndAmountToAddExpenseDetail);
-            var ExpenseDetailQuery = HelperService.DbQuery($@"select * from ExpenseDetails");
-            ExpenseDetailsList = JsonConvert.DeserializeObject<List<ExpenseDetail>>(ExpenseDetailQuery);
+            ExpenseDetailsList = repoExpenseDetail.GetAll().ToList();
         }
 
         public async Task SaveExpenseDetail()
         {
-            if (IsAddNewPayable)
-            {
-
-            }
             if (CurrentExpenseDetail.Id > 0)
             {
-                HelperService.DbQuery($@"UPDATE ExpenseDetails SET PayableId = {CurrentExpenseDetail.PayableId},
-                                        Amount = {CurrentExpenseDetail.Amount},
-                                        Comment = '{CurrentExpenseDetail.Comment}'
-                                        where Id = {CurrentExpenseDetail.Id}");
+                repoExpenseDetail.Update(CurrentExpenseDetail);
             }else
             {
-                HelperService.DbQuery($@"INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
-                                                    {CurrentExpenseDetail.PayableId},
-                                                        {CurrentExpenseDetail.Amount},
-                                                    '{CurrentExpenseDetail.Comment}', 0)");
+                var flag = true;
+                if (IsAddNewPayable)
+                {
+                    Payable payable = new Payable{
+                        Payablename = NewPayable,
+                        IsRecuring = false,
+                        Amount = (String.IsNullOrEmpty(Convert.ToString(CurrentExpenseDetail.Amount)) ? 0 : CurrentExpenseDetail.Amount),
+                        IsComplete  = false
+                    };
+                    repoPayable.Create(payable);
+                    var lastcreated = repoPayable.GetAll().ToList().Last();
+                    PayablesList.Add(lastcreated);
+                    CurrentExpenseDetail.PayableId = lastcreated.Payableid;
+                    IsAddNewPayable = false;
+                    NewPayable = string.Empty;
+                }
+
+                if (repoExpenseDetail.GetAll()
+                                     .ToList()
+                                     .Where(s=>s.PayableId == CurrentExpenseDetail.PayableId &&
+                                               s.Amount == CurrentExpenseDetail.Amount)
+                                               .Count() > 0)
+                {
+                    flag = false;
+                    await JS.InvokeVoidAsync("alert", "Expense with the same amount is already added");
+                    return;
+                }
+
+
+                if (flag)
+                {
+                    CurrentExpenseDetail.IncomeDateAndAmountId = CurrentIncomeDateAndAmountToAddExpenseDetail.Id;
+                    CurrentExpenseDetail.IsPaid = false;
+                    repoExpenseDetail.Create(CurrentExpenseDetail);
+                }
             }
 
             await RefreshExpenseDetails();
-
             CurrentExpenseDetail = new();
-
             StateHasChanged();
         }
 
@@ -117,7 +139,7 @@ namespace ExpenseTracker.Pages
             bool confirmed = await JS.InvokeAsync<bool>("confirm", "Delete this expense?");
             if (confirmed)
             {
-                HelperService.DbQuery($"DELETE FROM ExpenseDetails where Id = {detail.Id}");
+                repoExpenseDetail.Delete(s=>s.Id == detail.Id);
 
                 await RefreshExpenseDetails();
             }
@@ -126,20 +148,29 @@ namespace ExpenseTracker.Pages
         public async Task AddAllRecuring(IncomeDateAndAmount incomedate)
         {
             CurrentIncomeDateAndAmountToAddExpenseDetail = incomedate;
-            var getRcurringPayables = HelperService.DbQuery($@"SELECT * from Payable where IsRecuring = 1");
-            var recurringPayables = JsonConvert.DeserializeObject<List<Payable>>(getRcurringPayables);
+            var recurringPayables = repoPayable.GetAll().ToList().Where(s=>s.IsRecuring == true);
 
-            //delete all first
-            //HelperService.DbQuery($@"DELETE FROM ExpenseDetails where IncomeDateAndAmountId = {CurrentIncomeDateAndAmountToAddExpenseDetail.Id}");
+            List<ExpenseDetail> expenseDetails = new List<ExpenseDetail>();
             foreach (var item in recurringPayables)
             {
-                HelperService.DbQuery($@"IF NOT EXISTS(SELECT 1 FROM ExpenseDetails WHERE payableid = {item.Payableid} and IncomeDateAndAmountId = {CurrentIncomeDateAndAmountToAddExpenseDetail.Id})
-                                        INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
-                                                    {item.Payableid},
-                                                    {(item.Amount.HasValue ? item.Amount : 0)},
-                                                    'added from recurring',
-                                                    0)");
+                if (!repoExpenseDetail.GetAll()
+                                    .Any(s=>s.PayableId == item.Payableid &&
+                                           s.IncomeDateAndAmountId == CurrentIncomeDateAndAmountToAddExpenseDetail.Id))
+                {
+                    if (item.EndDate > DateTime.Now || item.EndDate is null)
+                    {
+                        ExpenseDetail expenseDetail = new ExpenseDetail{
+                            IncomeDateAndAmountId = CurrentIncomeDateAndAmountToAddExpenseDetail.Id,
+                            PayableId = item.Payableid,
+                            Amount = (item.Amount.HasValue ? item.Amount : 0),
+                            Comment = "added from recurring",
+                            IsPaid = false,
+                        };
+                        expenseDetails.Add(expenseDetail);
+                    }
+                }
             }
+            repoExpenseDetail.Create(expenseDetails);
 
             await RefreshExpenseDetails();
         }
@@ -153,38 +184,6 @@ namespace ExpenseTracker.Pages
             await RefreshExpenseDetails();
 
             StateHasChanged();
-        }
-
-        public async Task SaveNewPayable()
-        {
-            var isrecurring = false;
-            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Set as recurring?");
-            if (confirmed)
-            {
-                isrecurring = true;
-            }
-
-            HelperService.DbQuery($@"INSERT INTO Payable
-                                    values('{NewPayable}',
-                                    {(isrecurring == true ? 1 : 0)},
-                                    {(String.IsNullOrEmpty(Convert.ToString(CurrentExpenseDetail.Amount)) ? 0 : CurrentExpenseDetail.Amount)}
-                                    )");
-
-            var lastrowquery = HelperService.DbQuery("SELECT TOP 1 * FROM Payable ORDER BY payableid DESC");
-            var lastrowlist = JsonConvert.DeserializeObject<List<Payable>>(lastrowquery);
-            var lastrow = lastrowlist!.FirstOrDefault();
-
-            Payable p = new Payable();
-            p.Payableid = lastrow!.Payableid;
-            p.Payablename = NewPayable;
-            p.IsRecuring = (isrecurring ? true : false);
-            p.Amount = (isrecurring ? CurrentExpenseDetail.Amount : 0);
-            PayablesList?.Add(p);
-
-            CurrentExpenseDetail.PayableId = p.Payableid;
-
-            IsAddNewPayable = false;
-
         }
     }
 }

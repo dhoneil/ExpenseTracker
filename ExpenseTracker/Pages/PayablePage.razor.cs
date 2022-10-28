@@ -6,16 +6,18 @@ using Microsoft.AspNetCore.Components;
 using ExpenseTracker.Services;
 using ExpenseTracker.Models;
 using Newtonsoft.Json;
+using ExpenseTracker.Repository;
 
 namespace ExpenseTracker.Pages
 {
     public partial class PayablePage : ComponentBase
     {
         [Inject] IHelperService HelperService { get; set; } = null!;
-        public List<Payable>? Payables { get; set; } = new();
+        public List<Payable>? PayablesRecurring { get; set; } = new();
         public bool IsAddNewPayable { get; set; } = true;
         public Payable CurrentPayable { get; set; } = new();
         public bool IsChecked { get; set; } = false;
+        PayableRepository repoPayable = new PayableRepository();
 
         protected override async Task OnInitializedAsync()
         {
@@ -25,8 +27,8 @@ namespace ExpenseTracker.Pages
 
         public async Task LoadData()
         {
-            var payablesquery = HelperService.DbQuery($@"select * from Payable");
-            Payables = JsonConvert.DeserializeObject<List<Payable>>(payablesquery);
+            PayablesRecurring = repoPayable.GetAll().Where(s=>s.IsRecuring == true).ToList();
+            await Task.CompletedTask;
         }
 
         public async Task SavePayable()
@@ -35,19 +37,13 @@ namespace ExpenseTracker.Pages
 
             if (CurrentPayable.Payableid > 0 )
             {
-                HelperService.DbQuery($@"UPDATE Payable SET Payablename = '{CurrentPayable.Payablename}',
-                                        IsRecuring = {isrecuring},
-                                        Amount = {(CurrentPayable.Amount.HasValue ? CurrentPayable.Amount : 0)}
-                                        where Payableid  = {CurrentPayable.Payableid}");
+                repoPayable.Update(CurrentPayable);
                 await LoadData();
             }
             else
             {
-                HelperService.DbQuery($@"INSERT INTO Payable
-                                    values('{CurrentPayable.Payablename}',
-                                    {(CurrentPayable.IsRecuring.HasValue ? isrecuring : 0)},
-                                    {(CurrentPayable.Amount.HasValue ? CurrentPayable.Amount : 0)})");
-                Payables?.Add(CurrentPayable);
+                repoPayable.Create(CurrentPayable);
+                PayablesRecurring?.Add(CurrentPayable);
             }
 
             CurrentPayable = new();

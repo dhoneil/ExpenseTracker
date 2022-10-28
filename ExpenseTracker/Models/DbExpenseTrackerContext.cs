@@ -50,6 +50,7 @@ public partial class _ApplicationDbContext : DbContext
             entity.Property(e => e.IsRecuring).HasDefaultValueSql("((0))");
             entity.Property(e => e.Payablename).HasColumnName("payablename");
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.IsComplete).HasDefaultValueSql("((0))");
         });
 
         OnModelCreatingPartial(modelBuilder);

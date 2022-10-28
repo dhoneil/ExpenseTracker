@@ -17,6 +17,14 @@
                     <input class="form-control" @bind-value="CurrentPayable.Amount" />
                 </div>
                 <div class="form-group">
+                    <label for="">Start</label>
+                    <input type="date" class="form-control" @bind-value="CurrentPayable.StartDate" />
+                </div>
+                <div class="form-group">
+                    <label for="">End</label>
+                    <input type="date" class="form-control" @bind-value="CurrentPayable.EndDate" />
+                </div>
+                <div class="form-group">
                     <label for="">Recurring?</label>
                     <input
                         @bind-value="CurrentPayable.IsRecuring"
@@ -24,7 +32,12 @@
                 </div>
             </div>
             <div class="card-footer">
-                <button class="btn btn-sm btn-success btn-block" @onclick="SavePayable">Save</button>
+                <button class="btn btn-success" @onclick="SavePayable"><i class="fa fa-save"></i> Save</button>
+                &nbsp;
+                @if (CurrentPayable.Payableid > 0)
+                {
+                    <button class="btn btn-danger" @onclick="@(()=>CurrentPayable = new())"><i class="fa fa-times"></i> Cancel</button>
+                }
             </div>
         </div>
     </div>
@@ -46,7 +59,7 @@
                     <tbody>
                         @{
                             decimal amount = 0;
-                            foreach (var item in Payables)
+                            foreach (var item in PayablesRecurring)
                             {
                                 amount+=(decimal)item.Amount;
                                 <tr>
