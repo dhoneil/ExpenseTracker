@@ -21,6 +21,8 @@ namespace ExpenseTracker.Pages
         public bool IsAddNewExpenseDetail { get; set; }= false;
         public ExpenseDetail CurrentExpenseDetail { get; set; } = new();
         public IncomeDateAndAmount CurrentIncomeDateAndAmountToAddExpenseDetail { get; set; } = new();
+        public bool IsAddNewPayable { get; set; } =  false;
+        public string NewPayable { get; set; } = string.Empty;
         protected override async Task OnInitializedAsync()
         {
             await LoadData();
@@ -85,6 +87,10 @@ namespace ExpenseTracker.Pages
 
         public async Task SaveExpenseDetail()
         {
+            if (IsAddNewPayable)
+            {
+
+            }
             if (CurrentExpenseDetail.Id > 0)
             {
                 HelperService.DbQuery($@"UPDATE ExpenseDetails SET PayableId = {CurrentExpenseDetail.PayableId},
@@ -95,8 +101,8 @@ namespace ExpenseTracker.Pages
             {
                 HelperService.DbQuery($@"INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
                                                     {CurrentExpenseDetail.PayableId},
-                                                    {CurrentExpenseDetail.Amount},
-                                                    '{CurrentExpenseDetail.Comment}')");
+                                                        {CurrentExpenseDetail.Amount},
+                                                    '{CurrentExpenseDetail.Comment}', 0)");
             }
 
             await RefreshExpenseDetails();
@@ -131,7 +137,8 @@ namespace ExpenseTracker.Pages
                                         INSERT INTO ExpenseDetails VALUES({CurrentIncomeDateAndAmountToAddExpenseDetail.Id},
                                                     {item.Payableid},
                                                     {(item.Amount.HasValue ? item.Amount : 0)},
-                                                    'added from recurring')");
+                                                    'added from recurring',
+                                                    0)");
             }
 
             await RefreshExpenseDetails();
@@ -146,6 +153,38 @@ namespace ExpenseTracker.Pages
             await RefreshExpenseDetails();
 
             StateHasChanged();
+        }
+
+        public async Task SaveNewPayable()
+        {
+            var isrecurring = false;
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Set as recurring?");
+            if (confirmed)
+            {
+                isrecurring = true;
+            }
+
+            HelperService.DbQuery($@"INSERT INTO Payable
+                                    values('{NewPayable}',
+                                    {(isrecurring == true ? 1 : 0)},
+                                    {(String.IsNullOrEmpty(Convert.ToString(CurrentExpenseDetail.Amount)) ? 0 : CurrentExpenseDetail.Amount)}
+                                    )");
+
+            var lastrowquery = HelperService.DbQuery("SELECT TOP 1 * FROM Payable ORDER BY payableid DESC");
+            var lastrowlist = JsonConvert.DeserializeObject<List<Payable>>(lastrowquery);
+            var lastrow = lastrowlist!.FirstOrDefault();
+
+            Payable p = new Payable();
+            p.Payableid = lastrow!.Payableid;
+            p.Payablename = NewPayable;
+            p.IsRecuring = (isrecurring ? true : false);
+            p.Amount = (isrecurring ? CurrentExpenseDetail.Amount : 0);
+            PayablesList?.Add(p);
+
+            CurrentExpenseDetail.PayableId = p.Payableid;
+
+            IsAddNewPayable = false;
+
         }
     }
 }

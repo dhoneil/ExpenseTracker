@@ -60,14 +60,40 @@
                                                 <div class="card">
                                                     <div class="card-body">
                                                         <div class="form-group">
-                                                            <label for="">Payable</label>
-                                                            <select class="form-control" @bind="CurrentExpenseDetail.PayableId">
-                                                                <option value="0">[SELECT]</option>
-                                                                @foreach (var payable in PayablesList)
+                                                            <label for="">Payable
+                                                                &nbsp;
+                                                                @if (IsAddNewPayable)
                                                                 {
-                                                                    <option value="@payable.Payableid">@payable.Payablename</option>
+                                                                    <i
+                                                                        class="fa fa-minus"
+                                                                        style="cursor: pointer;"
+                                                                        @onclick="@(()=>IsAddNewPayable=false)">
+                                                                    </i>
+                                                                }else{
+                                                                    <i
+                                                                        class="fa fa-plus"
+                                                                        style="cursor: pointer;"
+                                                                        @onclick="@(()=>IsAddNewPayable=true)">
+                                                                    </i>
                                                                 }
-                                                            </select>
+                                                            </label>
+                                                            @if (IsAddNewPayable)
+                                                            {
+                                                                <div class="input-group">
+                                                                    <input class="form-control" @bind-value="NewPayable"  />
+                                                                    <div @onclick="SaveNewPayable" class="input-group-append" style="cursor:pointer;">
+                                                                        <div class="input-group-text"><i class="fa fa-save"></i></div>
+                                                                    </div>
+                                                                </div>
+                                                            }else{
+                                                                <select class="form-control" @bind="CurrentExpenseDetail.PayableId">
+                                                                    <option value="0">[SELECT]</option>
+                                                                    @foreach (var payable in PayablesList)
+                                                                    {
+                                                                        <option value="@payable.Payableid">@payable.Payablename</option>
+                                                                    }
+                                                                </select>
+                                                            }
                                                         </div>
                                                         <div class="form-group">
                                                             <label for="">Amount</label>
