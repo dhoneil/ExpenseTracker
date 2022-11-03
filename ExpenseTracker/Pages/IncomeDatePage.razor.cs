@@ -85,12 +85,21 @@ namespace ExpenseTracker.Pages
             ExpenseDetailsList = repoExpenseDetail.GetAll().ToList();
         }
 
+        public async Task OnChangePayablesDropdown(int payabledSelected)
+        {
+            var selectedPayable = payabledSelected;
+            CurrentExpenseDetail.PayableId = selectedPayable;
+            CurrentExpenseDetail.Amount = repoPayable.Get(selectedPayable)?.Amount;
+            await Task.CompletedTask;
+        }
+
         public async Task SaveExpenseDetail()
         {
             if (CurrentExpenseDetail.Id > 0)
             {
                 repoExpenseDetail.Update(CurrentExpenseDetail);
-            }else
+            }
+            else
             {
                 var flag = true;
                 if (IsAddNewPayable)
@@ -132,6 +141,13 @@ namespace ExpenseTracker.Pages
             await RefreshExpenseDetails();
             CurrentExpenseDetail = new();
             StateHasChanged();
+        }
+
+        public async Task EditExpenseDetail(ExpenseDetail detail)
+        {
+            //await OnChangePayablesDropdown((int)detail.PayableId);
+            await JS.InvokeVoidAsync("SelectOption","PayablesDropdown",detail.PayableId);
+            CurrentExpenseDetail = detail;
         }
 
         public async Task DeleteExpenseDetail(ExpenseDetail detail)

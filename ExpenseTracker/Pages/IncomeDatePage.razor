@@ -86,7 +86,7 @@
                                                             {
                                                                 <input class="form-control" @bind-value="NewPayable"  />
                                                             }else{
-                                                                <select class="form-control" @bind="CurrentExpenseDetail.PayableId">
+                                                                <select id="PayablesDropdown" class="form-control" @onchange="@((ChangeEventArgs args)=>OnChangePayablesDropdown(Convert.ToInt32(args.Value)))">
                                                                     <option value="0">[SELECT]</option>
                                                                     @foreach (var payable in RecurringPayablesList)
                                                                     {
@@ -145,7 +145,7 @@
                                                                     <td>@expense.Comment</td>
                                                                     <td>
                                                                         <div class="btn-group">
-                                                                            <button class="btn btn-sm btn-info" @onclick="@(()=>CurrentExpenseDetail = expense)">Edit</button>
+                                                                            <button class="btn btn-sm btn-info" @onclick="@(()=>EditExpenseDetail(expense))">Edit</button>
                                                                             <button class="btn btn-sm btn-danger" @onclick="@(()=>DeleteExpenseDetail(expense))">Delete</button>
                                                                         </div>
                                                                     </td>
